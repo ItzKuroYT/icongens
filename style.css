@@ -1,0 +1,60 @@
+body {
+  background: #e7ffe7;
+  color: #1b4d1b;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+header {
+  background: linear-gradient(90deg, #8bc34a, #388e3c);
+  padding: 1em 0;
+  text-align: center;
+  color: #fff;
+}
+
+.logo {
+  height: 80px;
+  margin-bottom: 0.5em;
+}
+
+nav a {
+  color: #fff;
+  margin: 0 1em;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+nav a:hover {
+  text-decoration: underline;
+}
+
+main {
+  max-width: 700px;
+  margin: 2em auto;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px #b1dbb1;
+  padding: 2em;
+}
+
+section {
+  margin-bottom: 2em;
+}
+
+.highlight {
+  color: #388e3c;
+  font-weight: bold;
+}
+
+.discord iframe {
+  border-radius: 8px;
+  border: none;
+  width: 100%;
+  max-width: 350px;
+  height: 500px;
+}
+
+ol {
+  padding-left: 1.2em;
+}
