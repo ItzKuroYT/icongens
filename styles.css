@@ -1031,12 +1031,52 @@ body.has-image-bg .galaxy-layer {
   display: none !important;
 }
 
+.anim-enter,
+.anim-reveal {
+  opacity: 0;
+  transform: translate3d(0, 24px, 0) scale(0.985);
+  filter: blur(5px);
+  will-change: opacity, transform, filter;
+}
+
+.anim-enter.is-visible,
+.anim-reveal.is-visible {
+  animation: fade-pop-in 0.74s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--anim-delay, 0ms);
+  opacity: 1;
+  transform: translate3d(0, 0, 0) scale(1);
+  filter: blur(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-enter,
+  .anim-reveal {
+    opacity: 1;
+    transform: none;
+    filter: none;
+    transition: none;
+  }
+}
+
 @keyframes drift-stars {
   0% {
     transform: translate3d(0, 0, 0) scale(1.1);
   }
   100% {
     transform: translate3d(-28px, -16px, 0) scale(1.15);
+  }
+}
+
+@keyframes fade-pop-in {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 24px, 0) scale(0.985);
+    filter: blur(5px);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+    filter: blur(0);
   }
 }
 

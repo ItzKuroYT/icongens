@@ -1,4 +1,10 @@
 const rateLimitMap = new Map();
+const { getTickets, saveTickets } = require("./_ticketStore");
+const {
+  isGitHubTicketStoreEnabled,
+  readGitHubTickets,
+  writeGitHubTickets
+} = require("./_githubTicketStore");
 
 function setCors(res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -99,6 +105,40 @@ function createTicketId() {
   return `IG-${time}-${rand}`;
 }
 
+function getClientIp(req) {
+  const raw = req.headers["x-forwarded-for"] || req.socket.remoteAddress || "unknown";
+  return String(raw).split(",")[0].trim() || "unknown";
+}
+
+async function saveTicketRecord(ticketRecord) {
+  if (isGitHubTicketStoreEnabled()) {
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const state = await readGitHubTickets();
+      const nextTickets = state.tickets.concat(ticketRecord);
+
+      try {
+        await writeGitHubTickets(
+          nextTickets,
+          state.sha,
+          `chore(tickets): add ${ticketRecord.id}`
+        );
+        return "github";
+      } catch (error) {
+        if (error && error.code === "GITHUB_CONFLICT") {
+          continue;
+        }
+        throw error;
+      }
+    }
+
+    throw new Error("GitHub tickets database is busy. Please try again.");
+  }
+
+  const tickets = await getTickets();
+  await saveTickets(tickets.concat(ticketRecord));
+  return "file";
+}
+
 async function sendToWebhook(ticketId, ticket) {
   const webhook = process.env.TICKETS_WEBHOOK_URL;
   if (!webhook) {
@@ -183,8 +223,8 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress || "unknown";
-  if (!allowByRateLimit(String(ip))) {
+  const clientIp = getClientIp(req);
+  if (!allowByRateLimit(clientIp)) {
     res.status(429).json({ ok: false, message: "Too many submissions. Please wait and try again." });
     return;
   }
@@ -202,28 +242,70 @@ module.exports = async function handler(req, res) {
   }
 
   const ticketId = createTicketId();
+  const ticketRecord = {
+    id: ticketId,
+    username: validated.ticket.username,
+    email: validated.ticket.email || "",
+    category: validated.ticket.category,
+    subject: validated.ticket.subject,
+    message: validated.ticket.message,
+    page: validated.ticket.page || "",
+    status: "OPEN",
+    sourceIp: clientIp,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
 
   try {
-    const webhookSent = await sendToWebhook(ticketId, validated.ticket);
-    const emailSent = await sendToResend(ticketId, validated.ticket);
+    const storedIn = await saveTicketRecord(ticketRecord);
+    const webhookConfigured = !!String(process.env.TICKETS_WEBHOOK_URL || "").trim();
+    const emailConfigured =
+      !!String(process.env.RESEND_API_KEY || "").trim() &&
+      !!String(process.env.TICKETS_NOTIFY_TO || "").trim();
 
-    if (!webhookSent && !emailSent) {
-      res.status(500).json({
-        ok: false,
-        message: "Server is missing ticket delivery configuration. Set TICKETS_WEBHOOK_URL or RESEND_API_KEY + TICKETS_NOTIFY_TO."
-      });
-      return;
+    let webhookSent = false;
+    let emailSent = false;
+
+    if (webhookConfigured) {
+      try {
+        webhookSent = await sendToWebhook(ticketId, validated.ticket);
+      } catch (error) {
+        webhookSent = false;
+      }
     }
+
+    if (emailConfigured) {
+      try {
+        emailSent = await sendToResend(ticketId, validated.ticket);
+      } catch (error) {
+        emailSent = false;
+      }
+    }
+
+    const hasDeliveryConfig = webhookConfigured || emailConfigured;
+    const hasDeliverySuccess = webhookSent || emailSent;
+    const responseMessage = !hasDeliveryConfig
+      ? "Ticket saved successfully. Notifications are not configured."
+      : hasDeliverySuccess
+      ? "Ticket submitted successfully"
+      : "Ticket saved, but notification delivery failed.";
 
     res.status(201).json({
       ok: true,
       ticketId,
-      message: "Ticket submitted successfully"
+      message: responseMessage,
+      storedIn,
+      notifications: {
+        webhookConfigured,
+        emailConfigured,
+        webhookSent,
+        emailSent
+      }
     });
   } catch (error) {
-    res.status(502).json({
+    res.status(500).json({
       ok: false,
-      message: "Ticket delivery failed. Please try again shortly."
+      message: "Ticket could not be saved. Check ticket storage configuration."
     });
   }
 };

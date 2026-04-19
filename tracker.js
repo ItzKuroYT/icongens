@@ -1,6 +1,7 @@
 (function () {
   const HISTORY_KEY = "flowertracker-history-v1";
   const EVENT_KEY = "flowertracker-events-v1";
+  const METRICS_KEY = "flowertracker-metrics-v1";
   const chartState = {
     history: [],
     rangeHours: 24,
@@ -42,6 +43,9 @@
         })
         .filter(function (item) {
           return Number.isFinite(item.ts) && Number.isFinite(item.total);
+        })
+        .sort(function (a, b) {
+          return a.ts - b.ts;
         });
     } catch (error) {
       return [];
@@ -103,6 +107,131 @@
     window.localStorage.setItem(EVENT_KEY, JSON.stringify(state));
   }
 
+  function getDefaultMetricsState() {
+    return {
+      globalPeak: 0,
+      byServer: {}
+    };
+  }
+
+  function getMetricsState() {
+    const raw = window.localStorage.getItem(METRICS_KEY);
+    if (!raw) {
+      return getDefaultMetricsState();
+    }
+
+    try {
+      const parsed = JSON.parse(raw);
+      const byServer = {};
+
+      if (parsed && typeof parsed.byServer === "object" && parsed.byServer !== null) {
+        Object.keys(parsed.byServer).forEach(function (serverId) {
+          const item = parsed.byServer[serverId];
+          const firstSeenTs = Number(item && item.firstSeenTs);
+          const peakPlayers = Number(item && item.peakPlayers);
+
+          byServer[serverId] = {
+            firstSeenTs: Number.isFinite(firstSeenTs) ? firstSeenTs : null,
+            peakPlayers: Number.isFinite(peakPlayers) ? peakPlayers : 0
+          };
+        });
+      }
+
+      const globalPeak = Number(parsed && parsed.globalPeak);
+      return {
+        globalPeak: Number.isFinite(globalPeak) ? globalPeak : 0,
+        byServer: byServer
+      };
+    } catch (error) {
+      return getDefaultMetricsState();
+    }
+  }
+
+  function setMetricsState(metricsState) {
+    window.localStorage.setItem(METRICS_KEY, JSON.stringify(metricsState));
+  }
+
+  function updateMetricsState(result) {
+    const now = getNow();
+    const next = getMetricsState();
+    const total = Number(result && result.totalPlayers);
+
+    if (Number.isFinite(total)) {
+      next.globalPeak = Math.max(next.globalPeak || 0, total);
+    }
+
+    (result && Array.isArray(result.servers) ? result.servers : []).forEach(function (server) {
+      if (!server || typeof server.id !== "string") {
+        return;
+      }
+
+      if (typeof server.playersOnline !== "number" || !Number.isFinite(server.playersOnline)) {
+        return;
+      }
+
+      const players = server.playersOnline;
+      const providerPeak =
+        typeof server.peakPlayers === "number" && Number.isFinite(server.peakPlayers)
+          ? server.peakPlayers
+          : players;
+      const providerUptimeSeconds =
+        typeof server.uptimeSeconds === "number" && Number.isFinite(server.uptimeSeconds)
+          ? Math.max(0, server.uptimeSeconds)
+          : null;
+      const providerFirstSeenTs =
+        providerUptimeSeconds === null
+          ? null
+          : Math.max(0, now - Math.round(providerUptimeSeconds * 1000));
+
+      const current = next.byServer[server.id] || {
+        firstSeenTs: null,
+        peakPlayers: 0
+      };
+
+      if (Number.isFinite(providerFirstSeenTs)) {
+        if (!Number.isFinite(current.firstSeenTs) || providerFirstSeenTs < current.firstSeenTs) {
+          current.firstSeenTs = providerFirstSeenTs;
+        }
+      } else if (!Number.isFinite(current.firstSeenTs)) {
+        current.firstSeenTs = now;
+      }
+      current.peakPlayers = Math.max(Number(current.peakPlayers) || 0, players, providerPeak);
+      next.byServer[server.id] = current;
+    });
+
+    setMetricsState(next);
+    return next;
+  }
+
+  function interpolateByServer(previous, current, ratio) {
+    const result = {};
+    const ids = new Set([
+      ...Object.keys(previous && previous.byServer ? previous.byServer : {}),
+      ...Object.keys(current || {})
+    ]);
+
+    ids.forEach(function (serverId) {
+      const start = Number(previous && previous.byServer ? previous.byServer[serverId] : NaN);
+      const end = Number(current[serverId]);
+
+      if (Number.isFinite(start) && Number.isFinite(end)) {
+        result[serverId] = Math.round(start + (end - start) * ratio);
+        return;
+      }
+
+      if (Number.isFinite(end)) {
+        result[serverId] = end;
+        return;
+      }
+
+      if (Number.isFinite(start)) {
+        result[serverId] = start;
+      }
+    });
+
+    return result;
+  }
+
   function appendHistory(totalPlayers, servers) {
     const now = getNow();
     const maxAge = 7 * 24 * 60 * 60 * 1000;
@@ -115,11 +244,29 @@
       }
     });
 
-    history.push({
+    const currentPoint = {
       ts: now,
       total: Number(totalPlayers) || 0,
       byServer: byServer
-    });
+    };
+
+    const lastPoint = history.length ? history[history.length - 1] : null;
+
+    if (lastPoint && Number.isFinite(lastPoint.ts) && now > lastPoint.ts) {
+      const delta = Math.abs(currentPoint.total - lastPoint.total);
+      const stepCount = Math.min(10, Math.max(0, delta - 1));
+
+      for (let step = 1; step <= stepCount; step += 1) {
+        const ratio = step / (stepCount + 1);
+        history.push({
+          ts: Math.round(lastPoint.ts + (now - lastPoint.ts) * ratio),
+          total: Math.round(lastPoint.total + (currentPoint.total - lastPoint.total) * ratio),
+          byServer: interpolateByServer(lastPoint, currentPoint.byServer, ratio)
+        });
+      }
+    }
+
+    history.push(currentPoint);
 
     const trimmed = history.filter(function (point) {
       return point.ts >= now - maxAge;
@@ -153,9 +300,9 @@
     return filtered;
   }
 
-  function computeRecordedPeak(history) {
+  function computeRecordedPeak(history, metricsState) {
     if (!Array.isArray(history) || !history.length) {
-      return null;
+      return Number(metricsState && metricsState.globalPeak) || null;
     }
     let peak = 0;
     history.forEach(function (point) {
@@ -163,12 +310,19 @@
         peak = point.total;
       }
     });
-    return peak;
+
+    const persistedPeak = Number(metricsState && metricsState.globalPeak);
+    return Math.max(peak, Number.isFinite(persistedPeak) ? persistedPeak : 0);
   }
 
-  function computeServerRecordedPeak(history, serverId) {
+  function computeServerRecordedPeak(history, serverId, metricsState) {
     if (!Array.isArray(history) || !history.length || !serverId) {
-      return null;
+      const fallbackPeak = Number(
+        metricsState && metricsState.byServer && metricsState.byServer[serverId]
+          ? metricsState.byServer[serverId].peakPlayers
+          : NaN
+      );
+      return Number.isFinite(fallbackPeak) ? fallbackPeak : null;
     }
 
     let peak = null;
@@ -182,22 +336,45 @@
       }
     });
 
+    const persistedPeak = Number(
+      metricsState && metricsState.byServer && metricsState.byServer[serverId]
+        ? metricsState.byServer[serverId].peakPlayers
+        : NaN
+    );
+    if (Number.isFinite(persistedPeak)) {
+      return peak === null ? persistedPeak : Math.max(peak, persistedPeak);
+    }
+
     return peak;
   }
 
-  function computeServerRecordedUptimeMs(history, serverId) {
-    if (!Array.isArray(history) || !history.length || !serverId) {
+  function computeServerRecordedUptimeMs(history, serverId, metricsState) {
+    if (!serverId) {
       return null;
     }
 
     let firstSeen = null;
-    history.forEach(function (point) {
-      const hasData =
-        point && point.byServer && Number.isFinite(point.byServer[serverId]);
-      if (hasData && firstSeen === null) {
-        firstSeen = point.ts;
+    if (Array.isArray(history) && history.length) {
+      history.forEach(function (point) {
+        const hasData =
+          point && point.byServer && Number.isFinite(point.byServer[serverId]);
+        if (hasData && firstSeen === null) {
+          firstSeen = point.ts;
+        }
+      });
+    }
+
+    const persistedFirstSeen = Number(
+      metricsState && metricsState.byServer && metricsState.byServer[serverId]
+        ? metricsState.byServer[serverId].firstSeenTs
+        : NaN
+    );
+
+    if (Number.isFinite(persistedFirstSeen)) {
+      if (firstSeen === null || persistedFirstSeen < firstSeen) {
+        firstSeen = persistedFirstSeen;
       }
-    });
+    }
 
     if (firstSeen === null) {
       return null;
@@ -347,13 +524,13 @@
     });
   }
 
-  function renderSummary(result, config, history) {
+  function renderSummary(result, config, history, metricsState) {
     const total = document.querySelector("[data-tracker-total]");
     const servers = document.querySelector("[data-tracker-servers]");
     const peak = document.querySelector("[data-tracker-peak]");
     const subtitle = document.querySelector("[data-tracker-count-copy]");
     const trackerError = document.querySelector("[data-tracker-error]");
-    const recordedPeak = computeRecordedPeak(history);
+    const recordedPeak = computeRecordedPeak(history, metricsState);
 
     if (total) {
       total.textContent = window.TemplateApp.formatNumber(result.totalPlayers);
@@ -404,7 +581,7 @@
     }
   }
 
-  function renderServerList(result, history) {
+  function renderServerList(result, history, metricsState) {
     const list = document.querySelector("[data-tracker-server-list]");
     if (!list) {
       return;
@@ -433,7 +610,7 @@
         ? "server-list-meta pull-error-text"
         : "server-list-meta";
 
-      const recordedPeak = computeServerRecordedPeak(history, server.id);
+      const recordedPeak = computeServerRecordedPeak(history, server.id, metricsState);
       const peakValueText =
         recordedPeak === null
           ? "Error fetching data"
@@ -443,7 +620,11 @@
           ? "server-stat-value error"
           : "server-stat-value";
 
-      const recordedUptimeMs = computeServerRecordedUptimeMs(history, server.id);
+      const recordedUptimeMs = computeServerRecordedUptimeMs(
+        history,
+        server.id,
+        metricsState
+      );
       const uptimeValueText =
         recordedUptimeMs === null
           ? "Error fetching data"
@@ -743,14 +924,16 @@
       history = appendHistory(result.totalPlayers, result.servers);
     }
 
+    const metricsState = updateMetricsState(result);
+
     const eventState = updateEventState(result, config);
 
     chartState.history = history;
     chartState.rangeHours = getRangeHours();
 
-    renderSummary(result, config, history);
+    renderSummary(result, config, history, metricsState);
     renderEventRow(eventState);
-    renderServerList(result, history);
+    renderServerList(result, history, metricsState);
     renderChart(chartState.history, chartState.rangeHours);
   }
 
