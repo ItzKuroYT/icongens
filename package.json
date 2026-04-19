@@ -1,7 +1,0 @@
-{
-  "name": "icongens-web",
-  "private": true,
-  "dependencies": {
-    "mongodb": "^6.17.0"
-  }
-}
