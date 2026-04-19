@@ -4,15 +4,15 @@
     <loc>https://example.com/</loc>
   </url>
   <url>
-    <loc>https://example.com/flowertracker.html</loc>
+    <loc>https://example.com/tracker/</loc>
   </url>
   <url>
-    <loc>https://example.com/rules.html</loc>
+    <loc>https://example.com/rules/</loc>
   </url>
   <url>
-    <loc>https://example.com/tos.html</loc>
+    <loc>https://example.com/tos/</loc>
   </url>
   <url>
-    <loc>https://example.com/privacy.html</loc>
+    <loc>https://example.com/privacy/</loc>
   </url>
 </urlset>

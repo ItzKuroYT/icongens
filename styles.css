@@ -952,6 +952,75 @@ body.has-image-bg .galaxy-layer {
   margin-top: 6px;
 }
 
+.ticket-form {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(89, 255, 111, 0.2);
+}
+
+.ticket-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.ticket-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #d5eddc;
+  font-weight: 600;
+}
+
+.ticket-field input,
+.ticket-field select,
+.ticket-field textarea {
+  border: 1px solid rgba(89, 255, 111, 0.24);
+  background: rgba(6, 29, 18, 0.92);
+  color: #e6f4ec;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font: inherit;
+}
+
+.ticket-field input:focus,
+.ticket-field select:focus,
+.ticket-field textarea:focus {
+  outline: none;
+  border-color: rgba(89, 255, 111, 0.7);
+  box-shadow: 0 0 0 3px rgba(89, 255, 111, 0.16);
+}
+
+.ticket-field textarea {
+  resize: vertical;
+  min-height: 140px;
+}
+
+.ticket-honeypot {
+  position: absolute;
+  left: -10000px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ticket-actions {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.ticket-status {
+  margin: 0;
+  color: #c0ddca;
+  font-weight: 600;
+}
+
+.ticket-status.error {
+  color: #ff8a83;
+}
+
 .hidden {
   display: none !important;
 }
@@ -1121,6 +1190,10 @@ body.has-image-bg .galaxy-layer {
   }
 
   .server-stat-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ticket-grid {
     grid-template-columns: 1fr;
   }
 }

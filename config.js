@@ -36,6 +36,7 @@ window.SITE_CONFIG = {
     primaryIp: "IconGen.minehut.gg",
     primaryPort: 25565,
     defaultPort: 25565,
+    statusProxyUrl: "https://icongens.vercel.app/api/player-status",
     fallbackOnlineCount: 111,
     showCopyToastMs: 1400,
     refreshMs: 60000
@@ -43,14 +44,15 @@ window.SITE_CONFIG = {
   links: {
     store: "https://icongens.tebex.io",
     discord: "https://discord.gg/fMbfFW7PWX",
-    support: "support-portal/auth",
-    tickets: "support-portal/dashboard",
-    login: "support-portal/auth?mode=login",
-    signup: "support-portal/auth?mode=signup",
-    tracker: "flowertracker.html",
-    rules: "rules.html",
-    tos: "tos.html",
-    privacy: "privacy.html"
+    support: "support/",
+    tickets: "support/?mode=tickets",
+    ticketsApi: "https://icongens.vercel.app/api/tickets",
+    login: "support/?mode=login",
+    signup: "support/?mode=signup",
+    tracker: "tracker/",
+    rules: "rules/",
+    tos: "tos/",
+    privacy: "privacy/"
   },
   socials: {
     twitter: "https://twitter.com/iconrealms",

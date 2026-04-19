@@ -55,6 +55,20 @@ If a server cannot be reached by the status providers, the UI shows `Error pulli
 
 If a tracker stat cannot be fetched (for example TPS or region), it shows `Error fetching data` in red for that stat.
 
+### GitHub Pages Fix (Recommended)
+
+GitHub Pages can fail to fetch some Minecraft status providers because of browser-side CORS/provider restrictions.
+
+This template includes a Vercel serverless proxy endpoint:
+
+- `api/player-status.js`
+
+Set this in `config.js`:
+
+- `server.statusProxyUrl`: `https://YOUR-VERCEL-PROJECT.vercel.app/api/player-status`
+
+When set, the frontend will query your Vercel endpoint first and only fall back to public providers if needed.
+
 ## SEO Notes
 
 - Update `baseUrl` in `config.js`.
@@ -68,3 +82,43 @@ Rules, Terms of Service, and Privacy content are generated from `config.js` in:
 - `legal.rules`
 - `legal.tos`
 - `legal.privacy`
+
+## Serverless Tickets (Vercel)
+
+Tickets can be submitted directly from `support/?mode=tickets`.
+
+- Frontend form page: `support/`
+- Serverless endpoint: `api/tickets.js`
+
+Deploy this root project to Vercel to enable the endpoint.
+
+If the frontend stays on GitHub Pages, set `links.ticketsApi` in `config.js` to your Vercel function URL (for example `https://your-project.vercel.app/api/tickets`).
+
+### Vercel Setup Values
+
+Deploy this repository root to Vercel if you want both endpoints in one place:
+
+- `api/player-status.js`
+- `api/tickets.js`
+
+Set `config.js` values:
+
+- `server.statusProxyUrl`: `https://YOUR-VERCEL-PROJECT.vercel.app/api/player-status`
+- `links.ticketsApi`: `https://YOUR-VERCEL-PROJECT.vercel.app/api/tickets` (or `/api/tickets` if site is also on Vercel)
+
+Environment variables for tickets endpoint (`api/tickets.js`):
+
+- Choose one delivery option:
+   - `TICKETS_WEBHOOK_URL`
+   - or `RESEND_API_KEY` + `TICKETS_NOTIFY_TO`
+- Optional:
+   - `TICKETS_FROM`
+
+Set at least one delivery path in Vercel Environment Variables:
+
+- `TICKETS_WEBHOOK_URL` (recommended for simple delivery)
+- or both `RESEND_API_KEY` and `TICKETS_NOTIFY_TO`
+
+Optional:
+
+- `TICKETS_FROM` for custom sender when using Resend

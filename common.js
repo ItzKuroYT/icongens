@@ -185,28 +185,28 @@
       el.setAttribute("href", links.discord || "#");
     });
     document.querySelectorAll("[data-link='support']").forEach(function (el) {
-      el.setAttribute("href", links.support || "support-portal/auth");
+      el.setAttribute("href", links.support || "support/");
     });
     document.querySelectorAll("[data-link='tickets']").forEach(function (el) {
-      el.setAttribute("href", links.tickets || "support-portal/dashboard");
+      el.setAttribute("href", links.tickets || "support/?mode=tickets");
     });
     document.querySelectorAll("[data-link='login']").forEach(function (el) {
-      el.setAttribute("href", links.login || "support-portal/auth?mode=login");
+      el.setAttribute("href", links.login || "support/?mode=login");
     });
     document.querySelectorAll("[data-link='signup']").forEach(function (el) {
-      el.setAttribute("href", links.signup || "support-portal/auth?mode=signup");
+      el.setAttribute("href", links.signup || "support/?mode=signup");
     });
     document.querySelectorAll("[data-link='tracker']").forEach(function (el) {
-      el.setAttribute("href", links.tracker || "flowertracker.html");
+      el.setAttribute("href", links.tracker || "tracker/");
     });
     document.querySelectorAll("[data-link='rules']").forEach(function (el) {
-      el.setAttribute("href", links.rules || "rules.html");
+      el.setAttribute("href", links.rules || "rules/");
     });
     document.querySelectorAll("[data-link='tos']").forEach(function (el) {
-      el.setAttribute("href", links.tos || "tos.html");
+      el.setAttribute("href", links.tos || "tos/");
     });
     document.querySelectorAll("[data-link='privacy']").forEach(function (el) {
-      el.setAttribute("href", links.privacy || "privacy.html");
+      el.setAttribute("href", links.privacy || "privacy/");
     });
 
     const footerCopy = document.querySelector("[data-footer-copy]");
@@ -673,7 +673,22 @@
   async function fetchServerStatus(serverConfig) {
     const endpoint = resolveServerEndpoint(serverConfig);
     const queryTarget = encodeURIComponent(endpoint.apiAddress);
-    const providers = [
+    const proxyUrlRaw =
+      config.server && typeof config.server.statusProxyUrl === "string"
+        ? config.server.statusProxyUrl.trim()
+        : "";
+
+    const providers = [];
+
+    if (proxyUrlRaw && !/REPLACE_WITH|YOUR_/i.test(proxyUrlRaw)) {
+      const separator = proxyUrlRaw.includes("?") ? "&" : "?";
+      providers.push({
+        name: "status-proxy",
+        url: `${proxyUrlRaw}${separator}address=${queryTarget}`
+      });
+    }
+
+    providers.push(
       {
         name: "mcstatus",
         url: `https://api.mcstatus.io/v2/status/java/${queryTarget}`
@@ -682,7 +697,7 @@
         name: "mcsrvstat",
         url: `https://api.mcsrvstat.us/3/${queryTarget}`
       }
-    ];
+    );
 
     let lastErrorMessage = "Unable to reach status providers";
 
