@@ -122,3 +122,31 @@ Set at least one delivery path in Vercel Environment Variables:
 Optional:
 
 - `TICKETS_FROM` for custom sender when using Resend
+
+## Auth Persistence (Root Serverless API)
+
+The root auth endpoints are:
+
+- `api/auth/signup.js`
+- `api/auth/login.js`
+
+They support two storage modes:
+
+1. MongoDB mode (recommended for Vercel production)
+   - Enabled automatically when `MONGODB_URI` is set.
+   - Optional `MONGODB_DB` (default: `icongens_support`).
+   - Users are stored in the `users` collection.
+
+2. JSON file mode (local/testing fallback)
+   - Used when `MONGODB_URI` is not set.
+   - Default file path: `data/users-db.json`
+   - Optional override: `USERS_DB_PATH`
+
+### Required Vercel Settings For Reliable Signup/Login
+
+Set these in Vercel Project Settings -> Environment Variables:
+
+- `MONGODB_URI` = your MongoDB connection string
+- Optional: `MONGODB_DB` = database name (for example `icongens_support`)
+
+Without MongoDB, file storage on serverless is not reliably persistent across instances/redeploys.

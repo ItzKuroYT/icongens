@@ -1,5 +1,6 @@
 const crypto = require("crypto");
 const { getUsers } = require("../_userStore");
+const { getUsersCollection } = require("../_mongoStore");
 
 function setCors(res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -76,10 +77,17 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const users = await getUsers();
-    const user = users.find(function (entry) {
-      return entry.usernameKey === username.toLowerCase();
-    });
+    const usersCollection = await getUsersCollection();
+    let user = null;
+
+    if (usersCollection) {
+      user = await usersCollection.findOne({ usernameKey: username.toLowerCase() });
+    } else {
+      const users = await getUsers();
+      user = users.find(function (entry) {
+        return entry.usernameKey === username.toLowerCase();
+      });
+    }
 
     if (!user) {
       res.status(401).json({ ok: false, message: "Invalid username or password." });

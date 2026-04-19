@@ -1,5 +1,6 @@
 const crypto = require("crypto");
 const { getUsers, saveUsers } = require("../_userStore");
+const { getUsersCollection } = require("../_mongoStore");
 
 function setCors(res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -103,6 +104,42 @@ module.exports = async function handler(req, res) {
   }
 
   try {
+    const usersCollection = await getUsersCollection();
+    if (usersCollection) {
+      const exists = await usersCollection.findOne({
+        $or: [
+          { usernameKey: validated.data.usernameKey },
+          { email: validated.data.email }
+        ]
+      });
+
+      if (exists) {
+        res.status(409).json({ ok: false, message: "Username or email already exists." });
+        return;
+      }
+
+      const hashed = await hashPassword(validated.data.password);
+      await usersCollection.insertOne({
+        id: `u_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+        username: validated.data.username,
+        usernameKey: validated.data.usernameKey,
+        email: validated.data.email,
+        passwordHash: hashed.passwordHash,
+        salt: hashed.salt,
+        createdAt: new Date().toISOString()
+      });
+
+      res.status(201).json({
+        ok: true,
+        message: "Account created successfully.",
+        user: {
+          username: validated.data.username,
+          email: validated.data.email
+        }
+      });
+      return;
+    }
+
     const users = await getUsers();
     const exists = users.some(function (user) {
       return (
