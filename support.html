@@ -101,18 +101,51 @@
             <p class="ticket-status" id="ticket-status" role="status" aria-live="polite"></p>
           </div>
         </form>
+
+        <form class="auth-form hidden" id="login-form" novalidate>
+          <div class="ticket-grid">
+            <label class="ticket-field" for="login-username">
+              Username
+              <input id="login-username" name="username" type="text" minlength="3" maxlength="24" required>
+            </label>
+
+            <label class="ticket-field" for="login-password">
+              Password
+              <input id="login-password" name="password" type="password" minlength="8" maxlength="72" required>
+            </label>
+          </div>
+
+          <div class="ticket-actions">
+            <button class="btn primary" id="login-submit" type="submit">Log In</button>
+            <p class="ticket-status" id="login-status" role="status" aria-live="polite"></p>
+          </div>
+        </form>
+
+        <form class="auth-form hidden" id="signup-form" novalidate>
+          <div class="ticket-grid">
+            <label class="ticket-field" for="signup-username">
+              Username
+              <input id="signup-username" name="username" type="text" minlength="3" maxlength="24" required>
+            </label>
+
+            <label class="ticket-field" for="signup-email">
+              Email
+              <input id="signup-email" name="email" type="email" maxlength="120" required>
+            </label>
+
+            <label class="ticket-field" for="signup-password">
+              Password
+              <input id="signup-password" name="password" type="password" minlength="8" maxlength="72" required>
+            </label>
+          </div>
+
+          <div class="ticket-actions">
+            <button class="btn primary" id="signup-submit" type="submit">Sign Up</button>
+            <p class="ticket-status" id="signup-status" role="status" aria-live="polite"></p>
+          </div>
+        </form>
       </div>
 
-      <div class="legal-panel" style="margin-top: 16px;">
-        <section class="legal-section">
-          <h2>What this page does</h2>
-          <ul class="legal-list">
-            <li>Handles tickets, login, and signup links from the homepage.</li>
-            <li>Submits tickets to a Vercel serverless endpoint at /api/tickets.</li>
-            <li>Keeps support inside your main website without a separate support URL.</li>
-          </ul>
-        </section>
-      </div>
     </main>
 
     <footer class="site-footer">
@@ -147,9 +180,19 @@
         const ticketForm = document.getElementById("ticket-form");
         const ticketSubmit = document.getElementById("ticket-submit");
         const ticketStatus = document.getElementById("ticket-status");
+        const loginForm = document.getElementById("login-form");
+        const loginSubmit = document.getElementById("login-submit");
+        const loginStatus = document.getElementById("login-status");
+        const signupForm = document.getElementById("signup-form");
+        const signupSubmit = document.getElementById("signup-submit");
+        const signupStatus = document.getElementById("signup-status");
         const config = window.SITE_CONFIG || {};
         const apiUrl =
           (config.links && config.links.ticketsApi) || "/api/tickets";
+        const loginApi =
+          (config.links && config.links.loginApi) || "/api/auth/login";
+        const signupApi =
+          (config.links && config.links.signupApi) || "/api/auth/signup";
 
         function setStatus(message, isError) {
           if (!ticketStatus) {
@@ -206,6 +249,106 @@
           }
         }
 
+        function setAuthStatus(target, message, isError) {
+          if (!target) {
+            return;
+          }
+          target.textContent = message;
+          target.classList.toggle("error", !!isError);
+        }
+
+        async function submitLogin(event) {
+          event.preventDefault();
+          if (!loginForm || !loginSubmit) {
+            return;
+          }
+
+          const formData = new FormData(loginForm);
+          const payload = {
+            username: String(formData.get("username") || "").trim(),
+            password: String(formData.get("password") || "")
+          };
+
+          loginSubmit.disabled = true;
+          setAuthStatus(loginStatus, "Logging in...", false);
+
+          try {
+            const response = await fetch(loginApi, {
+              method: "POST",
+              headers: {
+                "content-type": "application/json"
+              },
+              body: JSON.stringify(payload)
+            });
+
+            const result = await response.json().catch(function () {
+              return {};
+            });
+
+            if (!response.ok || !result.ok) {
+              throw new Error(result.message || "Login failed.");
+            }
+
+            window.localStorage.setItem(
+              "icongens-auth-user",
+              JSON.stringify({
+                username: result.user && result.user.username ? result.user.username : payload.username,
+                email: result.user && result.user.email ? result.user.email : "",
+                loggedInAt: new Date().toISOString()
+              })
+            );
+
+            setAuthStatus(loginStatus, "Login successful.", false);
+            loginForm.reset();
+          } catch (error) {
+            setAuthStatus(loginStatus, error.message || "Login failed.", true);
+          } finally {
+            loginSubmit.disabled = false;
+          }
+        }
+
+        async function submitSignup(event) {
+          event.preventDefault();
+          if (!signupForm || !signupSubmit) {
+            return;
+          }
+
+          const formData = new FormData(signupForm);
+          const payload = {
+            username: String(formData.get("username") || "").trim(),
+            email: String(formData.get("email") || "").trim(),
+            password: String(formData.get("password") || "")
+          };
+
+          signupSubmit.disabled = true;
+          setAuthStatus(signupStatus, "Creating account...", false);
+
+          try {
+            const response = await fetch(signupApi, {
+              method: "POST",
+              headers: {
+                "content-type": "application/json"
+              },
+              body: JSON.stringify(payload)
+            });
+
+            const result = await response.json().catch(function () {
+              return {};
+            });
+
+            if (!response.ok || !result.ok) {
+              throw new Error(result.message || "Sign up failed.");
+            }
+
+            setAuthStatus(signupStatus, "Account created. You can now log in.", false);
+            signupForm.reset();
+          } catch (error) {
+            setAuthStatus(signupStatus, error.message || "Sign up failed.", true);
+          } finally {
+            signupSubmit.disabled = false;
+          }
+        }
+
         const byMode = {
           tickets: {
             title: "Tickets",
@@ -243,11 +386,23 @@
         }
 
         if (ticketForm) {
+          ticketForm.classList.toggle("hidden", mode !== "tickets");
           if (mode === "tickets") {
-            ticketForm.classList.remove("hidden");
             ticketForm.addEventListener("submit", submitTicket);
-          } else {
-            ticketForm.classList.add("hidden");
+          }
+        }
+
+        if (loginForm) {
+          loginForm.classList.toggle("hidden", mode !== "login");
+          if (mode === "login") {
+            loginForm.addEventListener("submit", submitLogin);
+          }
+        }
+
+        if (signupForm) {
+          signupForm.classList.toggle("hidden", mode !== "signup");
+          if (mode === "signup") {
+            signupForm.addEventListener("submit", submitSignup);
           }
         }
       })();
