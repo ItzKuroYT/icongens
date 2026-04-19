@@ -1,0 +1,55 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  @apply bg-[#050d09] text-[#e7f6ee] antialiased;
+  background-image:
+    radial-gradient(circle at 10% 12%, rgba(85, 239, 139, 0.14), transparent 34%),
+    radial-gradient(circle at 85% 16%, rgba(246, 190, 74, 0.14), transparent 30%),
+    radial-gradient(circle at 55% 100%, rgba(85, 239, 139, 0.08), transparent 40%);
+}
+
+.panel {
+  @apply rounded-2xl border border-emerald-300/20 bg-panel/85 backdrop-blur-lg shadow-glow;
+}
+
+.badge {
+  @apply inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold;
+}
+
+.badge-open {
+  @apply badge bg-emerald-400/20 text-emerald-200;
+}
+
+.badge-closed {
+  @apply badge bg-slate-300/20 text-slate-200;
+}
+
+.badge-pending {
+  @apply badge bg-amber-400/20 text-amber-200;
+}
+
+.input {
+  @apply w-full rounded-xl border border-emerald-200/15 bg-black/30 px-3 py-2 text-sm outline-none transition focus:border-emerald-300/45;
+}
+
+.button {
+  @apply inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold transition;
+}
+
+.button-primary {
+  @apply button bg-emerald-400/20 text-emerald-100 hover:bg-emerald-400/30;
+}
+
+.button-secondary {
+  @apply button bg-white/10 text-white hover:bg-white/20;
+}
+
+.button-danger {
+  @apply button bg-rose-400/20 text-rose-100 hover:bg-rose-400/30;
+}
