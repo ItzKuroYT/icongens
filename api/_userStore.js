@@ -8,8 +8,8 @@ function getCandidatePaths() {
   const custom = (process.env.USERS_DB_PATH || "").trim();
   const candidates = [
     custom,
-    path.join(os.tmpdir(), "icongens-users.json"),
-    path.join(process.cwd(), "data", "users-db.json")
+    path.join(process.cwd(), "data", "users-db.json"),
+    path.join(os.tmpdir(), "icongens-users.json")
   ].filter(Boolean);
 
   return Array.from(new Set(candidates));
@@ -68,9 +68,7 @@ async function saveUsers(users) {
   const writablePath = await getWritablePath();
 
   if (!writablePath) {
-    MEM_USERS.length = 0;
-    MEM_USERS.push(...nextUsers);
-    return false;
+    throw new Error("No writable user database path available.");
   }
 
   await fs.writeFile(writablePath, JSON.stringify(nextUsers, null, 2), "utf8");

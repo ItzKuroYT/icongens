@@ -127,7 +127,10 @@ module.exports = async function handler(req, res) {
       createdAt: new Date().toISOString()
     });
 
-    await saveUsers(nextUsers);
+    const saved = await saveUsers(nextUsers);
+    if (!saved) {
+      throw new Error("User data could not be persisted.");
+    }
 
     res.status(201).json({
       ok: true,
