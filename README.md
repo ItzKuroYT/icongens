@@ -130,23 +130,54 @@ The root auth endpoints are:
 - `api/auth/signup.js`
 - `api/auth/login.js`
 
-They support two storage modes:
+They support three storage modes in this order:
 
-1. MongoDB mode (recommended for Vercel production)
-   - Enabled automatically when `MONGODB_URI` is set.
+1. GitHub-backed JSON mode (recommended when you want repo file commits + Vercel auto redeploy)
+   - Enabled automatically when all are set:
+      - `GITHUB_USERS_TOKEN`
+      - `GITHUB_USERS_OWNER`
+      - `GITHUB_USERS_REPO`
+   - Optional:
+      - `GITHUB_USERS_BRANCH` (default: `main`)
+      - `GITHUB_USERS_PATH` (default: `data/users-db.json`)
+      - `GITHUB_API_BASE` (default: `https://api.github.com`)
+   - Users are read/written through GitHub Contents API and committed to your repo.
+
+2. MongoDB mode
+   - Enabled automatically when `MONGODB_URI` is set and GitHub mode is not configured.
    - Optional `MONGODB_DB` (default: `icongens_support`).
    - Users are stored in the `users` collection.
 
-2. JSON file mode (local/testing fallback)
-   - Used when `MONGODB_URI` is not set.
+3. JSON file mode (local/testing fallback)
+   - Used when GitHub mode and Mongo mode are both not configured.
    - Default file path: `data/users-db.json`
    - Optional override: `USERS_DB_PATH`
 
-### Required Vercel Settings For Reliable Signup/Login
+### GitHub-Backed Setup (No Mongo Required)
 
-Set these in Vercel Project Settings -> Environment Variables:
+If you want the same workflow as your other project (JSON file update in repo + auto deploy), configure this in Vercel:
 
-- `MONGODB_URI` = your MongoDB connection string
-- Optional: `MONGODB_DB` = database name (for example `icongens_support`)
+1. Create a GitHub token:
+   - Fine-grained token is recommended.
+   - Grant repository `Contents` permission with Read and Write.
+   - Limit token access to the target repo.
 
-Without MongoDB, file storage on serverless is not reliably persistent across instances/redeploys.
+2. In Vercel Project Settings -> Environment Variables, add:
+   - `GITHUB_USERS_TOKEN` = your GitHub token
+   - `GITHUB_USERS_OWNER` = repo owner/user/org
+   - `GITHUB_USERS_REPO` = repo name
+   - Optional `GITHUB_USERS_BRANCH` = branch used by Vercel (example `main`)
+   - Optional `GITHUB_USERS_PATH` = file path (default `data/users-db.json`)
+
+3. Remove Mongo env vars if you do not want Mongo mode:
+   - Remove `MONGODB_URI`
+   - Remove `MONGODB_DB`
+
+4. Redeploy.
+
+5. Test flow:
+   - Sign up from `support/?mode=signup`
+   - Confirm a new commit updates `data/users-db.json`
+   - Log in from `support/?mode=login`
+
+Without GitHub mode or Mongo mode, runtime file storage on serverless is not reliably persistent across instances/redeploys.

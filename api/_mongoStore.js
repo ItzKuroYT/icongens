@@ -22,7 +22,12 @@ async function getMongoClient(uri) {
     globalStore.__icongensMongo.uri !== uri
   ) {
     globalStore.__icongensMongo.uri = uri;
-    globalStore.__icongensMongo.clientPromise = new MongoClient(uri).connect();
+    globalStore.__icongensMongo.clientPromise = new MongoClient(uri)
+      .connect()
+      .catch(function (error) {
+        globalStore.__icongensMongo.clientPromise = null;
+        throw error;
+      });
   }
 
   return globalStore.__icongensMongo.clientPromise;

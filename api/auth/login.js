@@ -1,6 +1,10 @@
 const crypto = require("crypto");
 const { getUsers } = require("../_userStore");
 const { getUsersCollection } = require("../_mongoStore");
+const {
+  isGitHubUserStoreEnabled,
+  readGitHubUsers
+} = require("../_githubUserStore");
 
 function setCors(res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -77,7 +81,50 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const usersCollection = await getUsersCollection();
+    if (isGitHubUserStoreEnabled()) {
+      try {
+        const state = await readGitHubUsers();
+        const user = state.users.find(function (entry) {
+          return entry.usernameKey === username.toLowerCase();
+        });
+
+        if (!user) {
+          res.status(401).json({ ok: false, message: "Invalid username or password." });
+          return;
+        }
+
+        const valid = await verifyPassword(password, user.salt, user.passwordHash);
+        if (!valid) {
+          res.status(401).json({ ok: false, message: "Invalid username or password." });
+          return;
+        }
+
+        res.status(200).json({
+          ok: true,
+          message: "Login successful.",
+          user: {
+            username: user.username,
+            email: user.email,
+            createdAt: user.createdAt
+          }
+        });
+        return;
+      } catch (error) {
+        res.status(500).json({
+          ok: false,
+          message: "Login storage unavailable. Check GitHub auth store settings."
+        });
+        return;
+      }
+    }
+
+    let usersCollection = null;
+    try {
+      usersCollection = await getUsersCollection();
+    } catch (mongoError) {
+      console.error("[auth/login] MongoDB unavailable, using file fallback:", mongoError && mongoError.message ? mongoError.message : mongoError);
+    }
+
     let user = null;
 
     if (usersCollection) {

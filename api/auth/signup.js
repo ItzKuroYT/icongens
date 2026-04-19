@@ -1,6 +1,11 @@
 const crypto = require("crypto");
 const { getUsers, saveUsers } = require("../_userStore");
 const { getUsersCollection } = require("../_mongoStore");
+const {
+  isGitHubUserStoreEnabled,
+  readGitHubUsers,
+  writeGitHubUsers
+} = require("../_githubUserStore");
 
 function setCors(res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -104,7 +109,68 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const usersCollection = await getUsersCollection();
+    if (isGitHubUserStoreEnabled()) {
+      const hashed = await hashPassword(validated.data.password);
+      const newUser = {
+        id: `u_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+        username: validated.data.username,
+        usernameKey: validated.data.usernameKey,
+        email: validated.data.email,
+        passwordHash: hashed.passwordHash,
+        salt: hashed.salt,
+        createdAt: new Date().toISOString()
+      };
+
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        const state = await readGitHubUsers();
+        const exists = state.users.some(function (user) {
+          return (
+            user.usernameKey === validated.data.usernameKey ||
+            user.email === validated.data.email
+          );
+        });
+
+        if (exists) {
+          res.status(409).json({ ok: false, message: "Username or email already exists." });
+          return;
+        }
+
+        const nextUsers = state.users.concat(newUser);
+
+        try {
+          await writeGitHubUsers(
+            nextUsers,
+            state.sha,
+            `chore(auth): add user ${validated.data.username}`
+          );
+
+          res.status(201).json({
+            ok: true,
+            message: "Account created successfully.",
+            user: {
+              username: validated.data.username,
+              email: validated.data.email
+            }
+          });
+          return;
+        } catch (error) {
+          if (error && error.code === "GITHUB_CONFLICT") {
+            continue;
+          }
+          throw error;
+        }
+      }
+
+      throw new Error("GitHub users database is busy. Please try again.");
+    }
+
+    let usersCollection = null;
+    try {
+      usersCollection = await getUsersCollection();
+    } catch (mongoError) {
+      console.error("[auth/signup] MongoDB unavailable, using file fallback:", mongoError && mongoError.message ? mongoError.message : mongoError);
+    }
+
     if (usersCollection) {
       const exists = await usersCollection.findOne({
         $or: [
@@ -178,6 +244,13 @@ module.exports = async function handler(req, res) {
       }
     });
   } catch (error) {
-    res.status(500).json({ ok: false, message: "Signup failed. Please try again." });
+    const message = error && error.message ? error.message : "Signup failed. Please try again.";
+    const isPersistError = /persisted|writable|database|mongodb|github|storage|auth/i.test(message);
+    res.status(500).json({
+      ok: false,
+      message: isPersistError
+        ? "Signup failed due to storage configuration. Check GitHub store env vars, MONGODB_URI, or USERS_DB_PATH."
+        : "Signup failed. Please try again."
+    });
   }
 };
