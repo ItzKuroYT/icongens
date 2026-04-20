@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <base href="../">
+    <title>FlowerTracker | Icongens</title>
+    <meta name="description" content="Live Minecraft player tracker for Icongens servers.">
+    <meta name="keywords" content="minecraft player tracker, flowertracker, minecraft analytics">
+    <meta name="theme-color" content="#052113">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="FlowerTracker | Icongens">
+    <meta property="og:description" content="Live player tracking across configured Minecraft servers.">
+    <meta property="og:image" content="icon.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="FlowerTracker | Icongens">
+    <meta name="twitter:description" content="Live player tracking across configured Minecraft servers.">
+    <meta name="twitter:image" content="icon.png">
+    <link rel="canonical" href="https://example.com/tracker/">
+    <link rel="icon" type="image/png" href="icon.png">
+    <link rel="apple-touch-icon" href="icon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <script id="json-ld" type="application/ld+json">{"@context":"https://schema.org","@type":"Dataset","name":"FlowerTracker","description":"Minecraft server player analytics","url":"https://example.com/tracker/"}</script>
+  </head>
+  <body class="has-galaxy-bg">
+    <div class="background-wrap" aria-hidden="true">
+      <div class="galaxy-layer galaxy-stars"></div>
+      <div class="galaxy-layer galaxy-nebula"></div>
+      <div class="galaxy-layer galaxy-vignette"></div>
+    </div>
+
+    <header class="site-header">
+      <nav class="main-nav" aria-label="Main Navigation">
+        <a class="brand" href="home/" aria-label="Go to homepage">
+          <img src="icon.png" alt="Server icon" data-icon-image>
+          <span class="js-server-name">Icongens</span>
+        </a>
+        <div class="nav-links">
+          <a class="nav-link" href="home/">Home</a>
+          <a class="nav-link" href="rules/" data-link="rules">Rules</a>
+          <a class="nav-link" href="tos/" data-link="tos">TOS</a>
+          <a class="nav-link" href="privacy/" data-link="privacy">Privacy</a>
+        </div>
+      </nav>
+    </header>
+
+    <main class="section tracker" aria-label="Player Tracker">
+      <div class="tracker-header">
+        <div>
+          <p class="section-kicker">Tracker</p>
+          <h1 class="tracker-title" data-tracker-title>IconTracker</h1>
+          <p class="tracker-subtitle" data-tracker-subtitle>Live player analytics across your configured Minecraft servers.</p>
+          <p class="tracker-subtitle" data-tracker-count-copy>
+            Counting 0 players on 0 Minecraft servers.
+          </p>
+        </div>
+        <div class="tracker-summary">
+          <div class="summary-pill">
+            <span class="label">Players Online</span>
+            <span class="value" data-tracker-total>0</span>
+          </div>
+          <div class="summary-pill">
+            <span class="label">Minecraft Servers</span>
+            <span class="value" data-tracker-servers>0</span>
+          </div>
+          <div class="summary-pill">
+            <span class="label">Peak Recorded</span>
+            <span class="value" data-tracker-peak>0</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="tracker-panel">
+        <div class="range-buttons" data-range-buttons></div>
+        <p class="tracker-events-row">
+          <span>Last crash: <strong data-last-crash>--</strong></span>
+          <span>Last kick: <strong data-last-kick>--</strong></span>
+        </p>
+        <p class="pull-error hidden" data-tracker-error role="status" aria-live="polite"></p>
+        <div class="chart-wrap">
+          <canvas data-tracker-canvas aria-label="Player history chart"></canvas>
+        </div>
+        <div class="server-list" data-tracker-server-list></div>
+      </div>
+
+      <div class="empire-panel" style="margin-top: 18px; text-align: center;">
+        <p class="ip-label">Server IP</p>
+        <p class="ip-value" data-server-ip>IconGen.minehut.gg</p>
+        <div class="empire-actions">
+          <button class="btn copy-btn glint-card" type="button" data-copy-ip>Copy IP</button>
+          <a class="btn secondary" href="https://discord.gg/fMbfFW7PWX" target="_blank" rel="noopener" data-link="discord">Join Discord</a>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-wrap">
+        <div class="footer-brand">
+          <img src="logo.png" alt="Server logo" data-logo-image>
+          <strong class="js-server-name">Icongens</strong>
+        </div>
+        <p class="footer-copy" data-footer-copy>© 2026 Icongens. Not affiliated with Mojang.</p>
+        <div class="footer-actions">
+          <a class="btn secondary" href="https://discord.gg/fMbfFW7PWX" target="_blank" rel="noopener" data-link="discord">Discord</a>
+          <a class="btn" href="tracker/" data-link="tracker">Tracker</a>
+        </div>
+        <div class="footer-socials" data-footer-socials aria-label="Social media links"></div>
+        <div class="footer-legal-links" aria-label="Legal Links">
+          <a class="footer-legal-link" href="rules/" data-link="rules">Rules</a>
+          <a class="footer-legal-link" href="tos/" data-link="tos">Terms of Service</a>
+          <a class="footer-legal-link" href="privacy/" data-link="privacy">Privacy</a>
+        </div>
+      </div>
+    </footer>
+
+    <script src="config.js"></script>
+    <script src="common.js"></script>
+    <script src="tracker.js"></script>
+  </body>
+</html>
